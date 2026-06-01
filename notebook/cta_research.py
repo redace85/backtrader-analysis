@@ -13,6 +13,7 @@ Note: Index data only supports long-only. For true long/short CTA,
 
 import os
 import datetime
+import math
 
 import backtrader as bt
 import pandas as pd
@@ -91,7 +92,7 @@ class CTAStrategy(bt.Strategy):
 
     def _target_size(self, data):
         atr = self.inds[data._name]['atr'][0]
-        if atr <= 0:
+        if not math.isfinite(atr) or atr <= 0:
             return 0
         risk_amount = self.broker.getvalue() * self.p.risk_pct
         return max(int(risk_amount / (atr * self.p.atr_mult)), 0)
@@ -221,7 +222,7 @@ def extract_metrics(strat, label=''):
     win_rate = won / total if total else 0.0
 
     gp = trades.get('won',  {}).get('pnl', {}).get('total', 0.0)
-    gl = abs(trades.get('lost', {}).get('pnl', {}).get('total', 1.0))
+    gl = abs(trades.get('lost', {}).get('pnl', {}).get('total', 0.0))
 
     return {
         'label':       label,
@@ -349,11 +350,19 @@ print(scan_df[['sqn', 'sharpe', 'max_dd_pct', 'ann_ret_pct',
                'trades', 'win_rate', 'pf']].to_string(
     float_format=lambda x: f'{x:.3f}'))
 
+def _safe_idxmax(col):
+    s = col.dropna()
+    return s.idxmax() if not s.empty else None
+
+def _safe_idxmin(col):
+    s = col.dropna()
+    return s.idxmin() if not s.empty else None
+
 best = {
-    'Best SQN':        scan_df['sqn'].idxmax(),
-    'Best Sharpe':     scan_df['sharpe'].idxmax(),
-    'Lowest Max DD':   scan_df['max_dd_pct'].idxmin(),
-    'Best Annual Ret': scan_df['ann_ret_pct'].idxmax(),
+    'Best SQN':        _safe_idxmax(scan_df['sqn']),
+    'Best Sharpe':     _safe_idxmax(scan_df['sharpe']),
+    'Lowest Max DD':   _safe_idxmin(scan_df['max_dd_pct']),
+    'Best Annual Ret': _safe_idxmax(scan_df['ann_ret_pct']),
 }
 print('\n── Best Configurations ───────────────────────────────────────')
 for label, idx in best.items():

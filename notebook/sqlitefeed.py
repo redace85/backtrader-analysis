@@ -1,6 +1,8 @@
 import backtrader as bt
 import sqlite3
 import datetime
+import calendar
+import re
 
 
 class SQLiteData(bt.feed.DataBase):
@@ -16,27 +18,32 @@ class SQLiteData(bt.feed.DataBase):
     def start(self):
         super().start()
         if self.data is None:
+            if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', self.p.tablename):
+                raise ValueError(f'Invalid tablename: {self.p.tablename!r}')
+
             self.conn = sqlite3.connect(self.p.dataname)
-            cur = self.conn.cursor()
+            try:
+                cur = self.conn.cursor()
 
-            where_clauses = []
-            params = []
-            if self.p.fromdate is not None:
-                where_clauses.append('timestamp >= ?')
-                params.append(int(self.p.fromdate.timestamp()))
-            if self.p.todate is not None:
-                where_clauses.append('timestamp <= ?')
-                params.append(int(self.p.todate.timestamp()))
+                where_clauses = []
+                params = []
+                if self.p.fromdate is not None:
+                    where_clauses.append('timestamp >= ?')
+                    params.append(calendar.timegm(self.p.fromdate.timetuple()))
+                if self.p.todate is not None:
+                    where_clauses.append('timestamp <= ?')
+                    params.append(calendar.timegm(self.p.todate.timetuple()))
 
-            sql = f'SELECT timestamp, open, high, low, close, volume FROM {self.p.tablename}'
-            if where_clauses:
-                sql += ' WHERE ' + ' AND '.join(where_clauses)
-            sql += ' ORDER BY timestamp'
+                sql = f'SELECT timestamp, open, high, low, close, volume FROM {self.p.tablename}'
+                if where_clauses:
+                    sql += ' WHERE ' + ' AND '.join(where_clauses)
+                sql += ' ORDER BY timestamp'
 
-            cur.execute(sql, params)
-            self.data = cur.fetchall()
-            self.conn.close()
-            self.conn = None
+                cur.execute(sql, params)
+                self.data = cur.fetchall()
+            finally:
+                self.conn.close()
+                self.conn = None
 
         self.iter = iter(self.data)
 
@@ -44,6 +51,7 @@ class SQLiteData(bt.feed.DataBase):
         if self.conn is not None:
             self.conn.close()
             self.conn = None
+        self.data = None  # reset so next start() re-fetches with current params
 
     def _load(self):
         if self.iter is None:

@@ -1,6 +1,8 @@
 import backtrader as bt
 import datetime
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # csv data source
@@ -125,7 +127,7 @@ def extract_metrics(strat, start_cash):
     avg_loss = trades.get('lost', {}).get('pnl', {}).get('average', 0.0)
     # profit factor: ratio of gross profit to gross loss
     gross_profit = trades.get('won', {}).get('pnl', {}).get('total', 0.0)
-    gross_loss = abs(trades.get('lost', {}).get('pnl', {}).get('total', 1.0))
+    gross_loss = abs(trades.get('lost', {}).get('pnl', {}).get('total', 0.0))
     profit_factor = gross_profit / gross_loss if gross_loss else float('inf')
 
     return {
@@ -181,11 +183,13 @@ print('Parameter scan: period in', SCAN_PERIODS)
 print('=' * 60)
 
 rows = []
+scan_strats = []
 for p in SCAN_PERIODS:
     c = build_cerebro(p)
     start_cash = c.broker.getvalue()
     res = c.run()
     s = res[0]
+    scan_strats.append(s)
     row = extract_metrics(s, start_cash)
     rows.append(row)
     print(f'  period={p:2d}  sqn={row["sqn"]:.3f}  sharpe={row["sharpe"]:.3f}'
@@ -200,23 +204,29 @@ print(results_df[[
     'total_trades', 'win_rate', 'profit_factor',
 ]].to_string(float_format=lambda x: f'{x:.3f}'))
 
+def _safe_idxmax(col):
+    s = col.dropna()
+    return s.idxmax() if not s.empty else None
+
+def _safe_idxmin(col):
+    s = col.dropna()
+    return s.idxmin() if not s.empty else None
+
 # highlight best by each dimension
 best = {
-    'Best SQN':       results_df['sqn'].idxmax(),
-    'Best Sharpe':    results_df['sharpe'].idxmax(),
-    'Lowest MaxDD':   results_df['max_drawdown_pct'].idxmin(),
-    'Best Annual Ret': results_df['annual_return_pct'].idxmax(),
+    'Best SQN':        _safe_idxmax(results_df['sqn']),
+    'Best Sharpe':     _safe_idxmax(results_df['sharpe']),
+    'Lowest MaxDD':    _safe_idxmin(results_df['max_drawdown_pct']),
+    'Best Annual Ret': _safe_idxmax(results_df['annual_return_pct']),
 }
 print('\n── Best periods ──────────────────────────────────────────────')
 for label, idx in best.items():
     print(f'  {label}: period={idx}')
 
-# annual returns heatmap (one column per year)
+# annual returns heatmap (one column per year) — reuse strats from scan loop
 annual_df = pd.DataFrame({
-    p: dict(strat.analyzers.annual.get_analysis())
-    for p, strat in zip(SCAN_PERIODS, [
-        build_cerebro(p).run()[0] for p in SCAN_PERIODS
-    ])
+    p: dict(s.analyzers.annual.get_analysis())
+    for p, s in zip(SCAN_PERIODS, scan_strats)
 }).T
 annual_df.index.name = 'period'
 print('\n── Annual returns by period (%) ──────────────────────────────')
