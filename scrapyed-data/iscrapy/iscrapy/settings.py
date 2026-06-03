@@ -77,8 +77,7 @@ ROBOTSTXT_OBEY = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   "iscrapy.pipelines.ConditionalPipeline": 100,
-   "iscrapy.pipelines.StorePipeline": 150,
+   "iscrapy.pipelines.StorePipeline": 100,
    # "iscrapy.pipelines.TelegramPipeline": 300,
 }
 

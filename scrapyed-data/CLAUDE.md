@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Purpose
+## Project Overview
 
-Scrapy-based data collection pipeline that fetches daily OHLCV data from Yahoo Finance (crypto/commodities) and Sina Finance (Chinese equities) and stores it in SQLite databases for use by the parent `backtrader-analysis` project.
+Scrapy-based data collection pipeline that fetches OHLCV market data from Yahoo Finance and Sina Finance, storing results in SQLite databases consumed by the parent `backtrader-analysis` project.
 
 ## Setup
 
@@ -14,56 +14,47 @@ source bin/activate
 pip install -r requirements.txt
 ```
 
-Requires `node` on PATH — the Sina Finance spider shells out to Node.js to decode the proprietary KLC binary encoding.
+Node.js must be installed — the Sina Finance spider shells out to `node` to decode the proprietary KLC binary encoding.
 
 ## Running
 
 ```bash
-# Run daily update (fetches BTC-USD, ETH-USD, sh000001, sz399006)
-./update_daily.sh
-
-# Run individual spiders from iscrapy/
+# Activate venv first
+source bin/activate
 cd iscrapy
+
+# Run a single spider
 scrapy crawl yahoo-finance -a symbol=BTC-USD
-scrapy crawl yahoo-finance -a symbol=BTC-USD -a period1=1609459200 -a period2=1741262400
-scrapy crawl sina-finance -a symbol=sz399006   # ChiNext (GEB)
+scrapy crawl sina-finance -a symbol=sz399006   # ChiNext
 scrapy crawl sina-finance -a symbol=sh000001   # SSE Composite
+
+# Run all daily updates
+bash update_daily.sh
 ```
+
+## Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DB_PATH` | `/Users/liuji/lite-data` | Directory where `{symbol}.db` SQLite files are written |
+| `TELE_TOKEN` | `''` | Telegram bot token for `TelegramPipeline` |
+| `TELE_ALARM_ID` | `@scrapy_crypto_infos` | Telegram chat ID for error alerts |
 
 ## Architecture
 
 ### Spider → Pipeline flow
 
-All spiders yield `IscrapyItem(item_id, data, msg, failed)`. Two pipelines run in order:
+Each spider yields `IscrapyItem(item_id, data, msg, failed)`. The item passes through two pipelines (both defined in `iscrapy/pipelines.py`):
 
-1. **`ConditionalPipeline` (priority 100)** — deduplication for `coin-market` spider only; drops items whose price hasn't moved >1% since last run. Uses a per-spider `.db` file in the working directory.
-2. **`StorePipeline` (priority 150)** — writes OHLCV rows to SQLite for `yahoo-finance` and `sina-finance` spiders. DB path comes from `DB_PATH` env var (default `/Users/liuji/lite-data`). File named `{symbol}.db`, table `ohlc(timestamp INTEGER PRIMARY KEY, open, high, low, close, volume)`.
-
-`TelegramPipeline` exists but is commented out in `settings.py`.
+1. **`StorePipeline`** (priority 100, always enabled) — writes OHLCV rows to `{DB_PATH}/{symbol}.db` using `INSERT OR REPLACE` on `timestamp` as the primary key. Creates the `ohlc` table if the file doesn't exist. Schema: `timestamp INTEGER PRIMARY KEY, open REAL, high REAL, low REAL, close REAL, volume INTEGER`.
+2. **`TelegramPipeline`** (priority 300, disabled in `settings.py`) — sends error items to `TELE_ALARM_ID` and success items to `spider.chat_id`. Re-enable by uncommenting in `ITEM_PIPELINES`.
 
 ### Spiders
 
-- **`yahoo-finance`** — hits Yahoo Finance v8 chart API. `period1`/`period2` are Unix timestamps; defaults to last 5 days. Timestamps in the response are Unix integers stored directly.
-- **`sina-finance`** — fetches Sina Finance's proprietary KLC-encoded binary blob, pipes it through an embedded Node.js decoder (`_NODE_SCRIPT` in `sina_finance.py`) to get OHLCV JSON. Dates are parsed as UTC midnight timestamps before storage.
-- **`coin-market`** — hits CoinMarketCap Pro API. Requires `CMC_API_KEY` env var and `CRYPTO_IDS` list in settings. Sends Telegram notifications via `TelegramPipeline` when price moves significantly.
+**`yahoo-finance`** (`iscrapy/spiders/yahoo_finance.py`) — calls the Yahoo Finance v8 chart API. Accepts `-a symbol=`, `-a period1=`, `-a period2=` (Unix timestamps). Defaults to the last 5 days if periods are omitted.
 
-### Environment variables
+**`sina-finance`** (`iscrapy/spiders/sina_finance.py`) — fetches full history for a Chinese A-share symbol from `finance.sina.com.cn/realstock/company/{symbol}/hisdata/klc_kl.js`. The response body is a KLC type-1479 binary-encoded string (base64-like, proprietary). Decoding is done by piping the encoded string through an embedded Node.js script (`_NODE_SCRIPT`) via `subprocess`. The JS `d()` function handles all Sina KLC subtypes; only type 1479 (full OHLCV history) is used here.
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `DB_PATH` | Directory where `{symbol}.db` files are written | `/Users/liuji/lite-data` |
-| `TELE_TOKEN` | Telegram bot token for alerts | `''` |
-| `TELE_ALARM_ID` | Telegram chat ID for error alerts | `@scrapy_crypto_infos` |
-| `CMC_API_KEY` | CoinMarketCap API key | `''` |
+### SQLite output
 
-### Database schema
-
-All output `.db` files use the same schema (compatible with `sqlitefeed.py` in the parent project):
-
-```sql
-CREATE TABLE ohlc(
-    timestamp INTEGER PRIMARY KEY,  -- Unix seconds UTC
-    open REAL, high REAL, low REAL, close REAL,
-    volume INTEGER
-)
-```
+Output files land in `DB_PATH` as `{symbol}.db`, e.g. `BTC-USD.db`, `sz399006.db`. These are the same format used by `sqlitefeed.py` (`SQLiteData`) in the parent backtrader notebooks — `dataname` is the file path, `tablename='ohlc'`.
