@@ -1,4 +1,5 @@
 anyio==4.13.0
+appnope==0.1.4
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
 arrow==1.4.0
@@ -11,6 +12,7 @@ backtrader-plotting==2.0.0
 beautifulsoup4==4.14.3
 bleach==6.3.0
 bokeh==2.3.3
+build==1.5.0
 certifi==2026.2.25
 cffi==2.0.0
 charset-normalizer==3.4.7
@@ -65,6 +67,7 @@ packaging==26.1
 pandas==3.0.2
 pandocfilters==1.5.1
 parso==0.8.6
+patsy==1.0.2
 pexpect==4.9.0
 pillow==12.2.0
 platformdirs==4.9.6
@@ -76,6 +79,7 @@ pure_eval==0.2.3
 pycparser==3.0
 Pygments==2.20.0
 pyparsing==3.3.2
+pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
 python-json-logger==4.1.0
 PyYAML==6.0.3
@@ -86,11 +90,14 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
 rpds-py==0.30.0
+scipy==1.17.1
+seaborn==0.13.2
 Send2Trash==2.1.0
 setuptools==82.0.1
 six==1.17.0
 soupsieve==2.8.3
 stack-data==0.6.3
+statsmodels==0.14.6
 terminado==0.18.1
 tinycss2==1.4.0
 tornado==6.5.5
