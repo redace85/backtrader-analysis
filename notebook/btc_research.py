@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 
 from sqlitefeed import SQLiteData
 
-DB_PATH = './csv_files/BTC-USD.db'
-
+DB_PATH = './sqlite_dbs/BTC-USD.db'
 
 class CTAStrategy(bt.Strategy):
     params = (
