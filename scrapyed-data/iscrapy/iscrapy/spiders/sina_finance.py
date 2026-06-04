@@ -336,7 +336,7 @@ class SinaFinanceSpider(scrapy.Spider):
         "Referer": "https://finance.sina.com.cn/",
     }
 
-    def start_requests(self):
+    async def start(self):
         # hisdata uses type-1479 encoding (full history, no date param needed).
         # hisdata_klc2 uses a newer type-3466 encoding with no public decoder.
         self.url = (

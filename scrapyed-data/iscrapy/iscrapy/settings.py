@@ -21,7 +21,7 @@ API_KEY = os.environ.get('CMC_API_KEY', '')
 # yahoo-finance
 
 # store-pipline
-DB_PATH = os.environ.get('DB_PATH', '/Users/liuji/lite-data')
+DB_PATH = os.environ.get('DB_PATH', '/Users/liuji/gitrepos/backtrader-analysis/notebook/sqlite_dbs')
 
 # tele-pipline
 TELE_TOKEN = os.environ.get('TELE_TOKEN', '')

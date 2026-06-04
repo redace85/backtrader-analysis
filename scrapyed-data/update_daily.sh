@@ -12,6 +12,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting daily update"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Fetching BTC-USD..."
 scrapy crawl yahoo-finance -a symbol=BTC-USD
+#scrapy crawl yahoo-finance -a symbol=BTC-USD period1=
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Fetching ETH-USD..."
 scrapy crawl yahoo-finance -a symbol=ETH-USD

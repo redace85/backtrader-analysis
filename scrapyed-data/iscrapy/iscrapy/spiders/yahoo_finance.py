@@ -14,28 +14,21 @@ class YahooFinanceSpider(scrapy.Spider):
     period1 = 0
     period2 = 0
 
-    def start_requests(self):
-        # api_key = self.settings.get('API_KEY')
-        # if len(api_key)==0:
-        #     raise Exception('No api_key id is given!')
-
-        if 0== self.period2:
+    async def start(self):
+        if 0 == self.period2:
             self.period2 = int(time.time())
 
-        if 0== self.period1:
+        if 0 == self.period1:
             self.period1 = self.period2 - (5 * SECONDS_PER_DAY)
 
-        # period1 = 867807000 
-        # period2 = 1741262400
-
-        self.url =(
-         f'https://query1.finance.yahoo.com/v8/finance/chart/{self.symbol}?'
-         f'period1={self.period1}&period2={self.period2}&interval=1d&includePrePost=true&events=div%7Csplit%7Cearn'
+        self.url = (
+            f'https://query1.finance.yahoo.com/v8/finance/chart/{self.symbol}?'
+            f'period1={self.period1}&period2={self.period2}&interval=1d&includePrePost=true&events=div%7Csplit%7Cearn'
         )
         headers = {
-                'User-Agent' : 'PostmanRuntime/7.36.0',
-                'Accept-Encoding' : 'gzip, deflate, br'
-                }
+            'User-Agent': 'PostmanRuntime/7.36.0',
+            'Accept-Encoding': 'gzip, deflate, br',
+        }
         yield scrapy.http.JsonRequest(url=self.url, dont_filter=True, headers=headers, callback=self.parse)
 
     def parse(self, response):

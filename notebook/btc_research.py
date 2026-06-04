@@ -10,7 +10,7 @@ from sqlitefeed import SQLiteData
 DB_PATH = './csv_files/BTC-USD.db'
 
 
-class CyStrategy(bt.Strategy):
+class CTAStrategy(bt.Strategy):
     params = (
         ('period', 5),
     )
@@ -139,9 +139,9 @@ def _build_cerebro_base():
 
 
 def build_cerebro(period):
-    """Build and configure a cerebro instance for CyStrategy with a given period."""
+    """Build and configure a cerebro instance for CTAStrategy with a given period."""
     cerebro = _build_cerebro_base()
-    cerebro.addstrategy(CyStrategy, period=period)
+    cerebro.addstrategy(CTAStrategy, period=period)
     return cerebro
 
 
@@ -285,7 +285,7 @@ metrics_bah = extract_metrics(strat_bah, 100000.0)
 
 # ── Strategy vs Buy & Hold comparison ────────────────────────────────────────
 print('\n' + '=' * 60)
-print('Strategy comparison: CyStrategy vs Buy & Hold')
+print('Strategy comparison: CTAStrategy vs Buy & Hold')
 print('=' * 60)
 
 metrics_single = extract_metrics(strat, 100000.0)
@@ -295,8 +295,8 @@ best_strat = scan_strats[SCAN_PERIODS.index(best_sqn_period)]
 metrics_best = extract_metrics(best_strat, 100000.0)
 
 comparison_rows = [
-    {**metrics_single,  'strategy': f'CyStrategy(period={SINGLE_PERIOD})'},
-    {**metrics_best,    'strategy': f'CyStrategy best SQN(period={best_sqn_period})'},
+    {**metrics_single,  'strategy': f'CTAStrategy(period={SINGLE_PERIOD})'},
+    {**metrics_best,    'strategy': f'CTAStrategy best SQN(period={best_sqn_period})'},
     {**metrics_bah,     'strategy': 'Buy & Hold'},
 ]
 comparison_df = pd.DataFrame(comparison_rows).set_index('strategy')
